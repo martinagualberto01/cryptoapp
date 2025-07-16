@@ -96,6 +96,40 @@ const Portfolio: React.FC = () => {
           </table>
         )}
       </div>
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold text-yellow-400 mb-2">Histórico de Transações</h3>
+        {transacoes.length === 0 ? (
+          <p className="text-gray-400">Nenhuma transação registrada.</p>
+        ) : (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-yellow-400">
+                <th className="py-2">Data</th>
+                <th className="py-2">Moeda</th>
+                <th className="py-2">Tipo</th>
+                <th className="py-2">Quantidade</th>
+                <th className="py-2">Preço (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transacoes.slice().reverse().map((t) => {
+                const moeda = moedasInfo.find((m) => m.id === t.moeda);
+                return (
+                  <tr key={t.id} className="border-b border-gray-700 hover:bg-gray-700/30">
+                    <td>{new Date(t.data).toLocaleString('pt-BR')}</td>
+                    <td className="flex items-center gap-2 py-2">
+                      {moeda && <img src={moeda.icone} alt={moeda.nome} className="w-5 h-5 rounded-full" />} {moeda ? moeda.nome : t.moeda}
+                    </td>
+                    <td className={t.tipo === 'compra' ? 'text-lime-400' : 'text-red-400'}>{t.tipo === 'compra' ? 'Compra' : 'Venda'}</td>
+                    <td>{t.quantidade}</td>
+                    <td>${t.preco.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </section>
   );
 };
