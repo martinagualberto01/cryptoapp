@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { buscarMoedasPopulares, buscarMoedasPorNome } from '../services/cryptoApi';
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
 
@@ -63,6 +64,8 @@ const CryptoChart: React.FC<Props> = ({ moedaId }) => {
   const [rsi, setRsi] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [macd, setMacd] = useState<{ macd: number[]; signal: number[]; hist: number[] } | null>(null);
+  const [icone, setIcone] = useState<string | null>(null);
+  const [nome, setNome] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,10 +84,27 @@ const CryptoChart: React.FC<Props> = ({ moedaId }) => {
     fetchData();
   }, [moedaId]);
 
+  useEffect(() => {
+    const fetchIconeNome = async () => {
+      const lista = await buscarMoedasPopulares();
+      let moeda = lista.find(m => m.id === moedaId);
+      if (!moeda) {
+        const res = await buscarMoedasPorNome(moedaId);
+        moeda = res.find((m: any) => m.id === moedaId);
+      }
+      setIcone(moeda?.icone || null);
+      setNome(moeda?.nome || moedaId);
+    };
+    fetchIconeNome();
+  }, [moedaId]);
+
   if (loading) return <div className="text-gray-300">Carregando gráfico...</div>;
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 shadow-md mt-4">
+      <div className="flex items-center gap-2 mb-2">
+        {icone && <img src={icone} alt={nome || moedaId} className="w-7 h-7 rounded-full" />}<span className="text-lime-400 font-bold text-lg">{nome || moedaId}</span>
+      </div>
       <h3 className="text-md font-semibold text-lime-400 mb-2">Gráfico de Preço (30 dias) & RSI & MACD</h3>
       <Line
         data={{
