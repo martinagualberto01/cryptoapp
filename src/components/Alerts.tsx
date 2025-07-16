@@ -80,6 +80,31 @@ const Alerts: React.FC = () => {
     return () => clearInterval(interval);
   }, [alertas]);
 
+  React.useEffect(() => {
+    // Cria alertas automáticos de RSI para cada moeda do portfólio se não existirem
+    moedasNoPortfolio.forEach((moedaId) => {
+      if (!alertas.some(a => a.moeda === moedaId && a.tipo === 'rsi' && a.condicao === '< 35')) {
+        adicionarAlerta({
+          id: Date.now().toString() + moedaId + 'rsi35',
+          moeda: moedaId,
+          tipo: 'rsi',
+          condicao: '< 35',
+          ativo: true,
+        });
+      }
+      if (!alertas.some(a => a.moeda === moedaId && a.tipo === 'rsi' && a.condicao === '> 70')) {
+        adicionarAlerta({
+          id: Date.now().toString() + moedaId + 'rsi70',
+          moeda: moedaId,
+          tipo: 'rsi',
+          condicao: '> 70',
+          ativo: true,
+        });
+      }
+    });
+    // eslint-disable-next-line
+  }, [moedasNoPortfolio]);
+
   function calcularRSI(prices: number[], periodo = 14) {
     let ganhos = 0;
     let perdas = 0;
