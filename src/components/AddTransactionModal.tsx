@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { useNavigate } from 'react-router-dom';
 import { buscarMoedasPopulares, buscarMoedasPorNome } from '../services/cryptoApi';
@@ -15,6 +15,10 @@ const AddTransactionModal: React.FC = () => {
   const [moedasPopulares, setMoedasPopulares] = useState<{ id: string; nome: string; simbolo: string; icone?: string }[]>([]);
   const [sugestoes, setSugestoes] = useState<{ id: string; nome: string; simbolo: string; icone?: string }[]>([]);
   const [loadingSugestoes, setLoadingSugestoes] = useState(false);
+  const [showSugestoes, setShowSugestoes] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const sugestoesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     buscarMoedasPopulares().then(setMoedasPopulares);
@@ -35,6 +39,13 @@ const AddTransactionModal: React.FC = () => {
     }, 300);
     return () => clearTimeout(timeout);
   }, [moeda]);
+
+  useEffect(() => {
+    if (showSugestoes && sugestoesRef.current) {
+      const el = sugestoesRef.current.querySelector('.highlighted') as HTMLElement;
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlighted, showSugestoes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,27 +81,88 @@ const AddTransactionModal: React.FC = () => {
 
   const opcoes = moeda.length > 1 && sugestoes.length > 0 ? sugestoes : moedasPopulares;
 
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMoeda(e.target.value);
+    setShowSugestoes(true);
+    setHighlighted(0);
+  };
+
+  const handleSelect = (m: { id: string }) => {
+    setMoeda(m.id);
+    setShowSugestoes(false);
+    setHighlighted(0);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSugestoes || opcoes.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      setHighlighted(h => Math.min(h + 1, opcoes.length - 1));
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      setHighlighted(h => Math.max(h - 1, 0));
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      if (opcoes[highlighted]) {
+        handleSelect(opcoes[highlighted]);
+        e.preventDefault();
+      }
+    } else if (e.key === 'Escape') {
+      setShowSugestoes(false);
+    }
+  };
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (
+        !inputRef.current?.contains(e.target as Node) &&
+        !sugestoesRef.current?.contains(e.target as Node)
+      ) {
+        setShowSugestoes(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
       <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md">
         <h2 className="text-lg font-bold text-lime-400 mb-4">Adicionar Transação</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label className="text-gray-300">
+          <label className="text-gray-300 relative">
             Moeda:
             <input
-              list="moedas-list"
+              ref={inputRef}
               value={moeda}
-              onChange={e => setMoeda(e.target.value)}
+              onChange={handleInput}
+              onFocus={() => setShowSugestoes(true)}
+              onKeyDown={handleKeyDown}
               className="w-full mt-1 p-2 rounded bg-gray-800 text-white"
               placeholder="Digite o id, nome ou símbolo da moeda"
               required
               autoFocus
+              autoComplete="off"
             />
-            <datalist id="moedas-list">
-              {opcoes.map(m => (
-                <option key={m.id} value={m.id}>{m.nome} ({m.simbolo.toUpperCase()})</option>
-              ))}
-            </datalist>
+            {showSugestoes && opcoes.length > 0 && (
+              <div
+                ref={sugestoesRef}
+                className="absolute z-50 left-0 right-0 bg-gray-900 border border-gray-700 rounded shadow-lg max-h-56 overflow-y-auto mt-1"
+              >
+                {opcoes.map((m, i) => (
+                  <div
+                    key={m.id}
+                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-800 ${i === highlighted ? 'bg-gray-800 highlighted' : ''}`}
+                    onMouseDown={() => handleSelect(m)}
+                  >
+                    {m.icone && <img src={m.icone} alt={m.nome} className="w-5 h-5 rounded-full" />}
+                    <span className="font-semibold text-lime-400">{m.nome}</span>
+                    <span className="text-xs text-gray-400">({m.simbolo.toUpperCase()})</span>
+                    <span className="text-xs text-gray-500 ml-auto">{m.id}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             {loadingSugestoes && <span className="text-xs text-gray-400 ml-2">Buscando moedas...</span>}
           </label>
           <label className="text-gray-300">
