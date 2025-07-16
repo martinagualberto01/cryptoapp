@@ -34,3 +34,16 @@ export const buscarMoedasPopulares = async () => {
     icone: coin.image,
   }));
 };
+
+export const buscarMoedasPorNome = async (query: string) => {
+  if (!query) return [];
+  const { data } = await axios.get(`${API_URL}/search`, {
+    params: { query },
+  });
+  return data.coins.map((coin: any) => ({
+    id: coin.id,
+    nome: coin.name,
+    simbolo: coin.symbol,
+    icone: coin.large,
+  }));
+};

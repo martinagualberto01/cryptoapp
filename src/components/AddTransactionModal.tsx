@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { useNavigate } from 'react-router-dom';
-import { buscarMoedasPopulares } from '../services/cryptoApi';
+import { buscarMoedasPopulares, buscarMoedasPorNome } from '../services/cryptoApi';
 
 const AddTransactionModal: React.FC = () => {
   const { adicionarTransacao } = usePortfolio();
@@ -13,10 +13,22 @@ const AddTransactionModal: React.FC = () => {
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 16));
   const [erro, setErro] = useState('');
   const [moedasPopulares, setMoedasPopulares] = useState<{ id: string; nome: string; simbolo: string }[]>([]);
+  const [sugestoes, setSugestoes] = useState<{ id: string; nome: string; simbolo: string }[]>([]);
 
   useEffect(() => {
     buscarMoedasPopulares().then(setMoedasPopulares);
   }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (moeda.length > 1) {
+        buscarMoedasPorNome(moeda).then(setSugestoes);
+      } else {
+        setSugestoes([]);
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [moeda]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +52,8 @@ const AddTransactionModal: React.FC = () => {
     navigate('/portfolio');
   };
 
+  const opcoes = moeda.length > 1 && sugestoes.length > 0 ? sugestoes : moedasPopulares;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
       <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md">
@@ -52,11 +66,11 @@ const AddTransactionModal: React.FC = () => {
               value={moeda}
               onChange={e => setMoeda(e.target.value)}
               className="w-full mt-1 p-2 rounded bg-gray-800 text-white"
-              placeholder="Digite o id da moeda (ex: bitcoin, ethereum, solana)"
+              placeholder="Digite o id, nome ou símbolo da moeda"
               required
             />
             <datalist id="moedas-list">
-              {moedasPopulares.map(m => (
+              {opcoes.map(m => (
                 <option key={m.id} value={m.id}>{m.nome} ({m.simbolo.toUpperCase()})</option>
               ))}
             </datalist>
