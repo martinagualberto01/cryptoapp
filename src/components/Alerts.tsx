@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAlerts } from '../context/AlertsContext';
 import { usePortfolio } from '../context/PortfolioContext';
 import { solicitarPermissaoNotificacao, enviarNotificacao } from '../services/notificationService';
 import CryptoChart from './CryptoChart';
+import { buscarMoedasPopulares, buscarMoedasPorNome } from '../services/cryptoApi';
 
 const tiposAlerta = [
   { value: 'preco', label: 'Preço' },
@@ -17,6 +18,27 @@ const Alerts: React.FC = () => {
   const [tipo, setTipo] = useState<'preco' | 'rsi'>('preco');
   const [condicao, setCondicao] = useState('');
   const [erro, setErro] = useState('');
+  const [icones, setIcones] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchIcones = async () => {
+      const lista = await buscarMoedasPopulares();
+      const faltantes = moedasNoPortfolio.filter(id => !lista.some(m => m.id === id));
+      let extras: any[] = [];
+      if (faltantes.length > 0) {
+        const promises = faltantes.map(async id => {
+          const res = await buscarMoedasPorNome(id);
+          return res.find((m: any) => m.id === id);
+        });
+        extras = (await Promise.all(promises)).filter(Boolean);
+      }
+      const iconesObj: Record<string, string> = {};
+      [...lista, ...extras].forEach(m => { if (m.icone) iconesObj[m.id] = m.icone; });
+      setIcones(iconesObj);
+    };
+    fetchIcones();
+    // eslint-disable-next-line
+  }, [moedasNoPortfolio]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,7 +236,7 @@ const Alerts: React.FC = () => {
             <tbody>
               {alertas.slice().reverse().map(a => (
                 <tr key={a.id} className="border-b border-gray-700 hover:bg-gray-700/30">
-                  <td>{a.moeda}</td>
+                  <td className="flex items-center gap-2 py-2">{icones[a.moeda] && <img src={icones[a.moeda]} alt={a.moeda} className="w-5 h-5 rounded-full" />} {a.moeda}</td>
                   <td>{a.tipo === 'preco' ? 'Preço' : 'RSI'}</td>
                   <td>{a.condicao}</td>
                   <td>{a.ativo ? <span className="text-lime-400">Sim</span> : <span className="text-red-400">Não</span>}</td>
