@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { useNavigate } from 'react-router-dom';
-
-const moedasPadrao = [
-  { id: 'bitcoin', nome: 'Bitcoin', simbolo: 'BTC' },
-  { id: 'ethereum', nome: 'Ethereum', simbolo: 'ETH' },
-  { id: 'tether', nome: 'Tether', simbolo: 'USDT' },
-  { id: 'binancecoin', nome: 'BNB', simbolo: 'BNB' },
-  { id: 'solana', nome: 'Solana', simbolo: 'SOL' },
-];
+import { buscarMoedasPopulares } from '../services/cryptoApi';
 
 const AddTransactionModal: React.FC = () => {
   const { adicionarTransacao } = usePortfolio();
@@ -19,11 +12,16 @@ const AddTransactionModal: React.FC = () => {
   const [preco, setPreco] = useState('');
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 16));
   const [erro, setErro] = useState('');
+  const [moedasPopulares, setMoedasPopulares] = useState<{ id: string; nome: string; simbolo: string }[]>([]);
+
+  useEffect(() => {
+    buscarMoedasPopulares().then(setMoedasPopulares);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
-    if (!quantidade || !preco) {
+    if (!moeda || !quantidade || !preco) {
       setErro('Preencha todos os campos.');
       return;
     }
@@ -33,7 +31,7 @@ const AddTransactionModal: React.FC = () => {
     }
     adicionarTransacao({
       id: Date.now().toString(),
-      moeda,
+      moeda: moeda.toLowerCase(),
       tipo,
       quantidade: Number(quantidade),
       preco: Number(preco),
@@ -49,11 +47,19 @@ const AddTransactionModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="text-gray-300">
             Moeda:
-            <select value={moeda} onChange={e => setMoeda(e.target.value)} className="w-full mt-1 p-2 rounded bg-gray-800 text-white">
-              {moedasPadrao.map(m => (
-                <option key={m.id} value={m.id}>{m.nome} ({m.simbolo})</option>
+            <input
+              list="moedas-list"
+              value={moeda}
+              onChange={e => setMoeda(e.target.value)}
+              className="w-full mt-1 p-2 rounded bg-gray-800 text-white"
+              placeholder="Digite o id da moeda (ex: bitcoin, ethereum, solana)"
+              required
+            />
+            <datalist id="moedas-list">
+              {moedasPopulares.map(m => (
+                <option key={m.id} value={m.id}>{m.nome} ({m.simbolo.toUpperCase()})</option>
               ))}
-            </select>
+            </datalist>
           </label>
           <label className="text-gray-300">
             Tipo:
