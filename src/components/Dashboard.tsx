@@ -43,6 +43,28 @@ const Dashboard: React.FC = () => {
   const saldoUSD = moedasNoPortfolio.reduce((acc, id) => acc + (precos[id]?.usd || 0) * saldoPorMoeda[id], 0);
   const saldoBRL = moedasNoPortfolio.reduce((acc, id) => acc + (precos[id]?.brl || 0) * saldoPorMoeda[id], 0);
 
+  // Cálculo do PnL não realizado (lucro/prejuízo)
+  let pnlUSD = 0;
+  moedasNoPortfolio.forEach((id) => {
+    // Filtra transações de compra e venda dessa moeda
+    const transacoesMoeda = transacoes.filter((t) => t.moeda === id);
+    let quantidadeTotal = 0;
+    let custoTotal = 0;
+    transacoesMoeda.forEach((t) => {
+      if (t.tipo === 'compra') {
+        quantidadeTotal += t.quantidade;
+        custoTotal += t.quantidade * t.preco;
+      } else {
+        quantidadeTotal -= t.quantidade;
+        custoTotal -= t.quantidade * (custoTotal / (quantidadeTotal + t.quantidade));
+      }
+    });
+    const precoMedio = quantidadeTotal > 0 ? custoTotal / quantidadeTotal : 0;
+    const valorAtual = (precos[id]?.usd || 0) * saldoPorMoeda[id];
+    const valorPago = precoMedio * saldoPorMoeda[id];
+    pnlUSD += valorAtual - valorPago;
+  });
+
   return (
     <section className="mb-6">
       <h2 className="text-xl font-semibold text-lime-400 mb-2">Visão Geral do Portfólio</h2>
@@ -58,7 +80,9 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="mb-4">
             <span className="block text-gray-300">PnL (Lucro/Prejuízo Não Realizado)</span>
-            <span className="text-lg font-bold text-white">(em breve)</span>
+            <span className={pnlUSD > 0 ? 'text-lime-400 text-lg font-bold' : pnlUSD < 0 ? 'text-red-400 text-lg font-bold' : 'text-white text-lg font-bold'}>
+              {loading ? '...' : `${pnlUSD > 0 ? '+' : ''}$${pnlUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            </span>
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
