@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAlerts } from '../context/AlertsContext';
 import { usePortfolio } from '../context/PortfolioContext';
+import { solicitarPermissaoNotificacao, enviarNotificacao } from '../services/notificationService';
+import CryptoChart from './CryptoChart';
 
 const tiposAlerta = [
   { value: 'preco', label: 'Preço' },
@@ -32,6 +34,75 @@ const Alerts: React.FC = () => {
     });
     setCondicao('');
   };
+
+  React.useEffect(() => {
+    solicitarPermissaoNotificacao();
+    if (alertas.length === 0) return;
+    const interval = setInterval(async () => {
+      for (const alerta of alertas) {
+        if (!alerta.ativo) continue;
+        // Buscar preço atual
+        if (alerta.tipo === 'preco') {
+          const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${alerta.moeda}&vs_currencies=usd`);
+          const data = await res.json();
+          const precoAtual = data[alerta.moeda]?.usd;
+          if (precoAtual !== undefined) {
+            try {
+              // Exemplo: > 70000 ou < 35000
+              // eslint-disable-next-line no-eval
+              if (eval(`${precoAtual} ${alerta.condicao}`)) {
+                enviarNotificacao('Alerta de Preço', `A moeda ${alerta.moeda} atingiu a condição: ${precoAtual} ${alerta.condicao}`);
+                alerta.ativo = false;
+              }
+            } catch {}
+          }
+        }
+        // Buscar RSI atual
+        if (alerta.tipo === 'rsi') {
+          const res = await fetch(`https://api.coingecko.com/api/v3/coins/${alerta.moeda}/market_chart?vs_currency=usd&days=30&interval=daily`);
+          const data = await res.json();
+          const priceArr = data.prices.map((p: any) => p[1]);
+          const rsi = calcularRSI(priceArr);
+          const rsiAtual = rsi[rsi.length - 1];
+          if (rsiAtual !== undefined) {
+            try {
+              // Exemplo: < 35 ou > 70
+              // eslint-disable-next-line no-eval
+              if (eval(`${rsiAtual} ${alerta.condicao}`)) {
+                enviarNotificacao('Alerta de RSI', `A moeda ${alerta.moeda} atingiu RSI: ${rsiAtual.toFixed(2)} ${alerta.condicao}`);
+                alerta.ativo = false;
+              }
+            } catch {}
+          }
+        }
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [alertas]);
+
+  function calcularRSI(prices: number[], periodo = 14) {
+    let ganhos = 0;
+    let perdas = 0;
+    for (let i = 1; i <= periodo; i++) {
+      const diff = prices[i] - prices[i - 1];
+      if (diff >= 0) ganhos += diff;
+      else perdas -= diff;
+    }
+    let rsiArray = [];
+    for (let i = periodo; i < prices.length; i++) {
+      const diff = prices[i] - prices[i - 1];
+      if (diff >= 0) {
+        ganhos = (ganhos * (periodo - 1) + diff) / periodo;
+        perdas = (perdas * (periodo - 1)) / periodo;
+      } else {
+        ganhos = (ganhos * (periodo - 1)) / periodo;
+        perdas = (perdas * (periodo - 1) - diff) / periodo;
+      }
+      const rs = ganhos / (perdas || 1e-10);
+      rsiArray.push(100 - 100 / (1 + rs));
+    }
+    return rsiArray;
+  }
 
   return (
     <section className="mt-6">
