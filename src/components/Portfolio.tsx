@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { buscarMoedasPopulares } from '../services/cryptoApi';
 import { usePortfolio } from '../context/PortfolioContext';
+import CryptoChart from './CryptoChart';
 
 interface Moeda {
   id: string;
@@ -96,6 +97,9 @@ const Portfolio: React.FC = () => {
           </table>
         )}
       </div>
+      {moedasInfo.length > 0 && (
+        <CryptoChart moedaId={moedasInfo[0].id} />
+      )}
       <div className="mt-8">
         <h3 className="text-lg font-semibold text-yellow-400 mb-2">Histórico de Transações</h3>
         {transacoes.length === 0 ? (
