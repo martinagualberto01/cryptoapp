@@ -65,13 +65,13 @@ const Portfolio: React.FC = () => {
   return (
     <section>
       <h2 className="text-xl font-semibold text-lime-400 mb-2">Portfólio</h2>
-      <div className="bg-gray-800 rounded-lg p-4 shadow-md">
+      <div className="bg-gray-800 rounded-lg p-4 shadow-md overflow-x-auto">
         {loading ? (
           <p className="text-gray-300">Carregando moedas...</p>
         ) : moedasNoPortfolio.length === 0 ? (
           <p className="text-gray-300">Nenhuma moeda no portfólio. Adicione uma transação!</p>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[600px] text-left">
             <thead>
               <tr className="text-yellow-400">
                 <th className="py-2">Moeda</th>
@@ -134,12 +134,12 @@ const Portfolio: React.FC = () => {
       {moedaSelecionada && (
         <CryptoChart moedaId={moedaSelecionada} />
       )}
-      <div className="mt-8">
+      <div className="mt-8 overflow-x-auto">
         <h3 className="text-lg font-semibold text-yellow-400 mb-2">Histórico de Transações</h3>
         {transacoes.length === 0 ? (
           <p className="text-gray-400">Nenhuma transação registrada.</p>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[500px] text-left">
             <thead>
               <tr className="text-yellow-400">
                 <th className="py-2">Data</th>

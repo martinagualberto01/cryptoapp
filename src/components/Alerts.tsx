@@ -219,12 +219,12 @@ const Alerts: React.FC = () => {
         </form>
         {erro && <div className="text-red-400 text-sm mt-2">{erro}</div>}
       </div>
-      <div className="bg-gray-800 rounded-lg p-4 shadow-md">
+      <div className="bg-gray-800 rounded-lg p-4 shadow-md overflow-x-auto">
         <h3 className="text-yellow-400 mb-2 font-semibold">Meus Alertas</h3>
         {alertas.length === 0 ? (
           <p className="text-gray-400">Nenhum alerta cadastrado.</p>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[400px] text-left">
             <thead>
               <tr className="text-yellow-400">
                 <th className="py-2">Moeda</th>

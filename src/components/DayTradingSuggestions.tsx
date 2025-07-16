@@ -79,13 +79,13 @@ const DayTradingSuggestions: React.FC = () => {
   return (
     <section className="mt-6">
       <h2 className="text-lg font-semibold text-yellow-400 mb-2">Sugestões Inteligentes</h2>
-      <div className="bg-gray-800 rounded-lg p-4 shadow-md">
+      <div className="bg-gray-800 rounded-lg p-4 shadow-md overflow-x-auto">
         {loading ? (
           <p className="text-gray-300">Analisando moedas...</p>
         ) : sugestoes.length === 0 ? (
           <p className="text-gray-300">Nenhuma moeda para sugerir.</p>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[500px] text-left">
             <thead>
               <tr className="text-yellow-400">
                 <th className="py-2">Moeda</th>
