@@ -12,8 +12,9 @@ const AddTransactionModal: React.FC = () => {
   const [preco, setPreco] = useState('');
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 16));
   const [erro, setErro] = useState('');
-  const [moedasPopulares, setMoedasPopulares] = useState<{ id: string; nome: string; simbolo: string }[]>([]);
-  const [sugestoes, setSugestoes] = useState<{ id: string; nome: string; simbolo: string }[]>([]);
+  const [moedasPopulares, setMoedasPopulares] = useState<{ id: string; nome: string; simbolo: string; icone?: string }[]>([]);
+  const [sugestoes, setSugestoes] = useState<{ id: string; nome: string; simbolo: string; icone?: string }[]>([]);
+  const [loadingSugestoes, setLoadingSugestoes] = useState(false);
 
   useEffect(() => {
     buscarMoedasPopulares().then(setMoedasPopulares);
@@ -22,15 +23,20 @@ const AddTransactionModal: React.FC = () => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (moeda.length > 1) {
-        buscarMoedasPorNome(moeda).then(setSugestoes);
+        setLoadingSugestoes(true);
+        buscarMoedasPorNome(moeda).then(res => {
+          setSugestoes(res);
+          setLoadingSugestoes(false);
+        });
       } else {
         setSugestoes([]);
+        setLoadingSugestoes(false);
       }
     }, 300);
     return () => clearTimeout(timeout);
   }, [moeda]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
     if (!moeda || !quantidade || !preco) {
@@ -39,6 +45,16 @@ const AddTransactionModal: React.FC = () => {
     }
     if (Number(quantidade) <= 0 || Number(preco) <= 0) {
       setErro('Valores devem ser positivos.');
+      return;
+    }
+    // Validação: verifica se o id da moeda existe na CoinGecko
+    let moedaValida = false;
+    if (moeda.length > 1) {
+      const res = await fetch(`https://api.coingecko.com/api/v3/coins/${moeda.toLowerCase()}`);
+      moedaValida = res.ok;
+    }
+    if (!moedaValida) {
+      setErro('Moeda não encontrada na CoinGecko. Verifique o id.');
       return;
     }
     adicionarTransacao({
@@ -68,12 +84,14 @@ const AddTransactionModal: React.FC = () => {
               className="w-full mt-1 p-2 rounded bg-gray-800 text-white"
               placeholder="Digite o id, nome ou símbolo da moeda"
               required
+              autoFocus
             />
             <datalist id="moedas-list">
               {opcoes.map(m => (
                 <option key={m.id} value={m.id}>{m.nome} ({m.simbolo.toUpperCase()})</option>
               ))}
             </datalist>
+            {loadingSugestoes && <span className="text-xs text-gray-400 ml-2">Buscando moedas...</span>}
           </label>
           <label className="text-gray-300">
             Tipo:
@@ -100,6 +118,9 @@ const AddTransactionModal: React.FC = () => {
             <button type="button" onClick={() => navigate('/portfolio')} className="flex-1 bg-gray-700 text-white py-2 rounded hover:bg-gray-600">Cancelar</button>
           </div>
         </form>
+        <div className="mt-2 text-xs text-gray-400">
+          Dica: O <b>id</b> da moeda é o mesmo usado na CoinGecko (ex: <b>bitcoin</b>, <b>ethereum</b>, <b>solana</b>, <b>pepe</b>, etc).
+        </div>
       </div>
     </div>
   );
