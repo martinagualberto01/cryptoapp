@@ -40,11 +40,29 @@ function calcularRSI(prices: number[], periodo = 14) {
   return rsiArray;
 }
 
+function calcularMACD(prices: number[], short = 12, long = 26, signal = 9) {
+  function ema(prices: number[], period: number) {
+    const k = 2 / (period + 1);
+    let emaArray = [prices[0]];
+    for (let i = 1; i < prices.length; i++) {
+      emaArray.push(prices[i] * k + emaArray[i - 1] * (1 - k));
+    }
+    return emaArray;
+  }
+  const emaShort = ema(prices, short);
+  const emaLong = ema(prices, long);
+  const macd = emaShort.map((v, i) => v - emaLong[i]);
+  const macdSignal = ema(macd.slice(long - 1), signal);
+  const macdHist = macd.slice(long - 1).map((v, i) => v - macdSignal[i]);
+  return { macd: macd.slice(long - 1), signal: macdSignal, hist: macdHist };
+}
+
 const CryptoChart: React.FC<Props> = ({ moedaId }) => {
   const [labels, setLabels] = useState<string[]>([]);
   const [prices, setPrices] = useState<number[]>([]);
   const [rsi, setRsi] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [macd, setMacd] = useState<{ macd: number[]; signal: number[]; hist: number[] } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,6 +75,7 @@ const CryptoChart: React.FC<Props> = ({ moedaId }) => {
       setLabels(data.prices.map((p: any) => new Date(p[0]).toLocaleDateString('pt-BR')));
       setPrices(priceArr);
       setRsi(calcularRSI(priceArr));
+      setMacd(calcularMACD(priceArr));
       setLoading(false);
     };
     fetchData();
@@ -66,7 +85,7 @@ const CryptoChart: React.FC<Props> = ({ moedaId }) => {
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 shadow-md mt-4">
-      <h3 className="text-md font-semibold text-lime-400 mb-2">Gráfico de Preço (30 dias) & RSI</h3>
+      <h3 className="text-md font-semibold text-lime-400 mb-2">Gráfico de Preço (30 dias) & RSI & MACD</h3>
       <Line
         data={{
           labels,
@@ -85,7 +104,35 @@ const CryptoChart: React.FC<Props> = ({ moedaId }) => {
               backgroundColor: 'rgba(253,224,71,0.1)',
               yAxisID: 'y1',
             },
-          ],
+            macd && {
+              label: 'MACD',
+              data: [ ...Array(prices.length - (macd.macd.length + 25)).fill(null), ...macd.macd ],
+              borderColor: '#38bdf8',
+              backgroundColor: 'rgba(56,189,248,0.1)',
+              yAxisID: 'y2',
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            macd && {
+              label: 'MACD Signal',
+              data: [ ...Array(prices.length - (macd.signal.length + 25)).fill(null), ...macd.signal ],
+              borderColor: '#f472b6',
+              backgroundColor: 'rgba(244,114,182,0.1)',
+              yAxisID: 'y2',
+              pointRadius: 0,
+              borderDash: [4, 4],
+              borderWidth: 2,
+            },
+            macd && {
+              type: 'bar',
+              label: 'MACD Hist',
+              data: [ ...Array(prices.length - (macd.hist.length + 25)).fill(null), ...macd.hist ],
+              backgroundColor: macd.hist.map(v => v > 0 ? 'rgba(163,230,53,0.5)' : 'rgba(244,114,182,0.5)'),
+              yAxisID: 'y2',
+              borderWidth: 0,
+              barPercentage: 0.7,
+            },
+          ].filter(Boolean),
         }}
         options={{
           responsive: true,
@@ -108,6 +155,14 @@ const CryptoChart: React.FC<Props> = ({ moedaId }) => {
               grid: { drawOnChartArea: false },
               ticks: { color: '#fde047' },
               title: { display: true, text: 'RSI', color: '#fde047' },
+            },
+            y2: {
+              type: 'linear',
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#38bdf8' },
+              title: { display: true, text: 'MACD', color: '#38bdf8' },
+              offset: true,
             },
             x: {
               ticks: { color: '#fff' },

@@ -15,6 +15,7 @@ const Portfolio: React.FC = () => {
   const [moedasInfo, setMoedasInfo] = useState<Moeda[]>([]);
   const [precos, setPrecos] = useState<Record<string, { usd: number; brl: number }>>({});
   const [loading, setLoading] = useState(true);
+  const [moedaSelecionada, setMoedaSelecionada] = useState<string | null>(null);
 
   // Calcula o saldo de cada moeda baseado nas transações
   const saldoPorMoeda: Record<string, number> = {};
@@ -40,6 +41,12 @@ const Portfolio: React.FC = () => {
     fetchMoedas();
     // eslint-disable-next-line
   }, [transacoes]);
+
+  useEffect(() => {
+    if (moedasInfo.length > 0 && !moedaSelecionada) {
+      setMoedaSelecionada(moedasInfo[0].id);
+    }
+  }, [moedasInfo, moedaSelecionada]);
 
   return (
     <section>
@@ -98,7 +105,21 @@ const Portfolio: React.FC = () => {
         )}
       </div>
       {moedasInfo.length > 0 && (
-        <CryptoChart moedaId={moedasInfo[0].id} />
+        <div className="my-4">
+          <label className="text-gray-300 mr-2">Visualizar gráfico de:</label>
+          <select
+            value={moedaSelecionada ?? ''}
+            onChange={e => setMoedaSelecionada(e.target.value)}
+            className="bg-gray-800 text-white p-2 rounded"
+          >
+            {moedasInfo.map(m => (
+              <option key={m.id} value={m.id}>{m.nome} ({m.simbolo.toUpperCase()})</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {moedaSelecionada && (
+        <CryptoChart moedaId={moedaSelecionada} />
       )}
       <div className="mt-8">
         <h3 className="text-lg font-semibold text-yellow-400 mb-2">Histórico de Transações</h3>
