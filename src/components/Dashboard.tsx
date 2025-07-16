@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { buscarMoedasPopulares } from '../services/cryptoApi';
+import { usePortfolio } from '../context/PortfolioContext';
 
 interface Moeda {
   id: string;
@@ -9,33 +10,38 @@ interface Moeda {
 }
 
 const Dashboard: React.FC = () => {
+  const { transacoes } = usePortfolio();
   const [moedas, setMoedas] = useState<Moeda[]>([]);
   const [precos, setPrecos] = useState<Record<string, { usd: number; brl: number }>>({});
   const [loading, setLoading] = useState(true);
 
-  // Simulação de portfólio: 0.5 BTC, 2 ETH, 1000 USDT
-  const portfolioSimulado = [
-    { id: 'bitcoin', quantidade: 0.5 },
-    { id: 'ethereum', quantidade: 2 },
-    { id: 'tether', quantidade: 1000 },
-  ];
+  // Calcula o saldo de cada moeda baseado nas transações
+  const saldoPorMoeda: Record<string, number> = {};
+  transacoes.forEach((t) => {
+    if (!saldoPorMoeda[t.moeda]) saldoPorMoeda[t.moeda] = 0;
+    saldoPorMoeda[t.moeda] += t.tipo === 'compra' ? t.quantidade : -t.quantidade;
+  });
+  const moedasNoPortfolio = Object.keys(saldoPorMoeda).filter((id) => saldoPorMoeda[id] > 0);
 
   useEffect(() => {
     const fetchMoedas = async () => {
       setLoading(true);
       const lista = await buscarMoedasPopulares();
       setMoedas(lista);
-      const ids = lista.map((m: Moeda) => m.id).join(',');
-      const precosUSD = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,brl`).then(r => r.json());
-      setPrecos(precosUSD);
+      const ids = moedasNoPortfolio.join(',');
+      if (ids) {
+        const precosUSD = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,brl`).then(r => r.json());
+        setPrecos(precosUSD);
+      }
       setLoading(false);
     };
     fetchMoedas();
-  }, []);
+    // eslint-disable-next-line
+  }, [transacoes]);
 
   // Cálculo do saldo total
-  const saldoUSD = portfolioSimulado.reduce((acc, ativo) => acc + (precos[ativo.id]?.usd || 0) * ativo.quantidade, 0);
-  const saldoBRL = portfolioSimulado.reduce((acc, ativo) => acc + (precos[ativo.id]?.brl || 0) * ativo.quantidade, 0);
+  const saldoUSD = moedasNoPortfolio.reduce((acc, id) => acc + (precos[id]?.usd || 0) * saldoPorMoeda[id], 0);
+  const saldoBRL = moedasNoPortfolio.reduce((acc, id) => acc + (precos[id]?.brl || 0) * saldoPorMoeda[id], 0);
 
   return (
     <section className="mb-6">
