@@ -14,5 +14,23 @@ export const buscarPreco = async (moedaId: string, vs: 'usd' | 'brl') => {
   return data[moedaId];
 };
 
-export const buscarIcone = (moedaId: string) =>
-  `https://assets.coingecko.com/coins/images/${moedaId}/large.png`;
+export const buscarIcone = (iconeUrl: string) => iconeUrl;
+
+export const buscarMoedasPopulares = async () => {
+  const { data } = await axios.get(`${API_URL}/coins/markets`, {
+    params: {
+      vs_currency: 'usd',
+      order: 'market_cap_desc',
+      per_page: 20,
+      page: 1,
+      sparkline: false,
+    },
+  });
+  // Retorna id, nome, símbolo e url do ícone
+  return data.map((coin: any) => ({
+    id: coin.id,
+    nome: coin.name,
+    simbolo: coin.symbol,
+    icone: coin.image,
+  }));
+};
