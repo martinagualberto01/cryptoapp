@@ -102,6 +102,45 @@ const Alerts: React.FC = () => {
         });
       }
     });
+    // Função para enviar relatório diário
+    const enviarRelatorio = async () => {
+      if (moedasNoPortfolio.length === 0) return;
+      let relatorio = 'Relatório do Portfólio:\n';
+      for (const moedaId of moedasNoPortfolio) {
+        const res = await fetch(`https://api.coingecko.com/api/v3/coins/${moedaId}/market_chart?vs_currency=usd&days=30&interval=daily`);
+        const data = await res.json();
+        const priceArr = data.prices.map((p: any) => p[1]);
+        const precoAtual = priceArr[priceArr.length - 1];
+        const rsi = calcularRSI(priceArr);
+        const rsiAtual = rsi[rsi.length - 1];
+        relatorio += `\n${moedaId.toUpperCase()}: $${precoAtual?.toLocaleString('en-US', { minimumFractionDigits: 2 })} | RSI: ${rsiAtual ? rsiAtual.toFixed(2) : '--'}`;
+      }
+      enviarNotificacao('Relatório Diário', relatorio);
+    };
+    // Função para calcular o tempo até o próximo horário alvo
+    function msAteProximaHora(horas: number[]) {
+      const agora = new Date();
+      const proxima = new Date(agora);
+      for (let h of horas) {
+        proxima.setHours(h, 0, 0, 0);
+        if (proxima > agora) return proxima.getTime() - agora.getTime();
+      }
+      // Se já passou de todas, agenda para o primeiro horário do dia seguinte
+      proxima.setDate(proxima.getDate() + 1);
+      proxima.setHours(horas[0], 0, 0, 0);
+      return proxima.getTime() - agora.getTime();
+    }
+    // Agendamento dos relatórios
+    let timeout: NodeJS.Timeout;
+    function agendar() {
+      const ms = msAteProximaHora([9, 13, 21]);
+      timeout = setTimeout(async () => {
+        await enviarRelatorio();
+        agendar();
+      }, ms);
+    }
+    agendar();
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line
   }, [moedasNoPortfolio]);
 
