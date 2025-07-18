@@ -45,3 +45,4 @@ Quero que você crie um aplicativo completo chamado **Crypto Portfolio & Market 
 
 Tudo deve estar em português (nomes, textos da interface, botões etc.).
 
+
